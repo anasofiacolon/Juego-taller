@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<script src="https://www.unpkg.com/odyc@0.0.18/dist/index.global.js"></script>
+	</head>
+    <style>
+        html,
+        body {
+          margin: 0;
+        }
+      
+        arcgis-map {
+          display: block;
+          height: 100vh;
+        }
+    </style>
+	<body>
+		<script>
+            const playerStartingPosition = [1, 5]
+            let state = {
+                following: false,
+                currentPosition : playerStartingPosition,
+                previousPosition: playerStartingPosition,
+                followerPosition: null
+            };
+            
+            
+            const sprites = {
+                player: `
+                        ..4.4...
+                        ..4.4.4.
+                        ..4.4.4.
+                        4.44444.
+                        4443434.
+                        .444444.
+                        ..43344.
+                        ..4444..
+                    `,
+                zorzal: `........
+                        ..999...
+                        .3919...
+                        ..999...
+                        ..9999..
+                        ..99999.
+                        ..99999.
+                        ...5.5..
+                    `,
+                tree: `........
+                        ..7777..
+                        ..7777..
+                        ..7777..
+                        ...99...
+                        ...99...
+                        ...99...
+                        ...99...
+                    `        
+            };
+
+            const maps = {
+                
+            }
+			const game = odyc.createGame({
+                title: "Ayudando un zorzal",
+                screenWidth: 16,
+                screenHeight: 16,
+                cellWidth: 8,
+                cellHeight: 8,
+                controls: {
+                    LEFT: 'ArrowLeft',
+                    RIGHT: 'ArrowRight',
+                    UP: 'ArrowUp',
+                    DOWN: 'ArrowDown',
+                    ACTION: ['Enter', 'Space']
+                },
+                player: {
+                    sprite: sprites.player,
+                    position: playerStartingPosition
+                },
+                templates: {
+                    // Carretera
+                    c: {
+                        sprite: 0,
+                        solid: false
+                    },
+                    // Acera
+                    a: { 
+                        sprite: 2,
+                        solid: false
+                    },
+                    // Grama
+                    g: {
+                        sprite: 7,
+                        solid: false
+                    },
+                    // Arbol
+                    t: {
+                        sprite: sprites.tree,
+                        solid: true,
+                        dialog: 'Acho gracias',
+                        onCollide(target){
+                            game.end("Ayudaste al zorzal. The end")
+                        }
+                    },
+                    l: {
+                        sprite: 5,
+                        solid: false
+                    },
+                    Z: {
+                        sprite: sprites.zorzal,
+                        dialog: 'Holaaaaa. Tu me llevas pal bosque?',
+                        sound: JSON.stringify({
+                            waveForm: 2,
+                            frequency: 440,
+                            sustainTime: 0.2,
+                            decayTime: 0.5
+                        }),
+                        onCollide(target) {
+                            const [px, py] = game.player.position;
+                            const [tx, ty] = target.position;
+
+                            state.following = true;
+                            state.currentPosition = game.player.position;
+                            state.followerPosition = target.position;
+                            target.remove()
+                        }
+                    }
+                },
+                map: `
+                    aaaaaaaaaaaaaaaaaaaaaaaaaaaggggg
+                    aaaaaaaaaaaaaaaaaaaaaaaaaaaggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccZcccccccccccccccccccccggtgg
+                    cccccccccccccccccccccccccccggtgg
+                    cccccccccccccccccccccccccccggtgg
+                    llcccccllcccccllcccccllccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    cccccccccccccccccccccccccccggggg
+                    aaaaaaaaaaaaaaaaaaaaaaaaaaaggggg
+                    aaaaaaaaaaaaaaaaaaaaaaaaaaaggggg
+                `,
+                background: 0,
+                cameraWidth: 2,
+                cameraHeight: 2
+            })
+
+            // TODO: Add validation for out of bounds
+            // TODO: Add logic so that you can't speak with bird when following
+            // TODO: Figure out the background over the grass
+            // TODO: Figure out how to rerender the street stripes when walking over them
+            // Add title and ending
+            document.addEventListener('keydown', (event) => {
+                if(event.key == 'ArrowRight'){
+                    let playerPosition = game.player.position;
+
+                    state.currentPosition = playerPosition;
+                    state.previousPosition = [playerPosition[0] - 1, playerPosition[1]]
+
+                    if(state.following){
+                        game.getCell(...state.followerPosition).remove()
+                        state.followerPosition = state.previousPosition;
+                        game.addToCell(...state.previousPosition, 'Z')
+
+                    }
+                } else if(event.key == 'ArrowLeft'){
+                    let playerPosition = game.player.position;
+
+                    state.currentPosition = playerPosition;
+                    state.previousPosition = [playerPosition[0] + 1, playerPosition[1]]
+
+                    if(state.following){
+                        game.getCell(...state.followerPosition).remove()
+                        state.followerPosition = state.previousPosition;
+                        game.addToCell(...state.previousPosition, 'Z')
+                    }
+                } else if(event.key == 'ArrowUp'){
+                    let playerPosition = game.player.position;
+
+                    state.currentPosition = playerPosition;
+                    state.previousPosition = [playerPosition[0], playerPosition[1] + 1]
+
+                    if(state.following){
+                        game.getCell(...state.followerPosition).remove()
+                        state.followerPosition = state.previousPosition;
+                        game.addToCell(...state.previousPosition, 'Z')
+                    }
+
+                } else if(event.key == 'ArrowDown'){
+                    let playerPosition = game.player.position;
+                    
+                    state.currentPosition = playerPosition;
+                    state.previousPosition = [playerPosition[0], playerPosition[1] - 1]
+
+                    if(state.following){
+                        game.getCell(...state.followerPosition).remove()
+                        state.followerPosition = state.previousPosition;
+                        game.addToCell(...state.previousPosition, 'Z')
+                    }
+                }
+            })
+		</script>
+	</body>
+</html>
